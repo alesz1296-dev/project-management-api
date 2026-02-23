@@ -2,14 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
+import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 
 const app = express();
 
-//middlewars
+//middlewares
 app.use(cors());
 app.use(express.json());
+app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
