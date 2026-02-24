@@ -33,7 +33,7 @@ export class TaskService {
       where: {
         userId_organizationId: {
           userId,
-          organizationId: project.organizationId.id,
+          organizationId: project.organizationId,
         },
       },
     });
@@ -50,7 +50,7 @@ export class TaskService {
         where: {
           userId_organizationId: {
             userId: data.assignedTo,
-            organizationId: project.organizationId.id,
+            organizationId: project.organizationId,
           },
         },
       });

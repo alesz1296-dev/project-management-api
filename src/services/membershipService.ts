@@ -191,7 +191,7 @@ export class MembershipService {
    * GET ORGANIZATION MEMBERS
    * ============================================
    */
-  static async getMembers(organizationId: number) {
+  static async getOrganizationMembers(organizationId: number) {
     // Check if organization exists
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
@@ -250,10 +250,10 @@ export class MembershipService {
 
   /**
    * ============================================
-   * GET MEMBER DETAILS
+   * GET MEMBER BY ID DETAILS
    * ============================================
    */
-  static async getMember(organizationId: number, userId: number) {
+  static async getMemberById(organizationId: number, userId: number) {
     // Get specific membership
     const membership = await prisma.membership.findUnique({
       where: {

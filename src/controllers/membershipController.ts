@@ -210,14 +210,14 @@ export const updateMemberRole = async (req: Request, res: Response) => {
  * GET ORGANIZATION MEMBERS
  * ============================================
  */
-export const getMembers = async (req: Request, res: Response) => {
+export const getOrganizationMembers = async (req: Request, res: Response) => {
   try {
     // Validate organization ID
     const orgId = validateOrgId(req.params.id, res);
     if (orgId === null) return;
 
     // Call service to get all members
-    const members = await MembershipService.getMembers(orgId);
+    const members = await MembershipService.getOrganizationMembers(orgId);
 
     // Return success response
     res.status(200).json({
@@ -271,10 +271,10 @@ export const getUserMemberships = async (req: Request, res: Response) => {
 
 /**
  * ============================================
- * GET MEMBER DETAILS
+ * GET MEMBER BY ID DETAILS
  * ============================================
  */
-export const getMember = async (req: Request, res: Response) => {
+export const getMemberById = async (req: Request, res: Response) => {
   try {
     // Validate organization ID
     const orgId = validateOrgId(req.params.orgId, res);
@@ -285,7 +285,7 @@ export const getMember = async (req: Request, res: Response) => {
     if (userId === null) return;
 
     // Call service to get member details
-    const member = await MembershipService.getMember(orgId, userId);
+    const member = await MembershipService.getMemberById(orgId, userId);
 
     // Return success response
     res.status(200).json({

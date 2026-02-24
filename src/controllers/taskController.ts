@@ -31,10 +31,7 @@ const validateTaskId = (id: string, res: Response): number | null => {
   return taskId;
 };
 
-const validateTaskStatus = (
-  status: string,
-  res: Response
-): 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED' | null => {
+const validateTaskStatus = (status: string, res: Response): boolean => {
   const validStatuses = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED'];
   if (!validStatuses.includes(status)) {
     res.status(400).json({
@@ -42,24 +39,21 @@ const validateTaskStatus = (
       message:
         'Invalid task status. Must be BACKLOG, TODO, IN_PROGRESS, DONE, or CANCELLED.',
     });
-    return null;
+    return false;
   }
-  return status as 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
+  return true;
 };
 
-const validateTaskPriority = (
-  priority: string,
-  res: Response
-): 'LOW' | 'MEDIUM' | 'HIGH' | null => {
+const validateTaskPriority = (priority: string, res: Response): boolean => {
   const validPriorities = ['LOW', 'MEDIUM', 'HIGH'];
   if (!validPriorities.includes(priority)) {
     res.status(400).json({
       success: false,
       message: 'Invalid task priority. Must be LOW, MEDIUM, or HIGH.',
     });
-    return null;
+    return false;
   }
-  return priority as 'LOW' | 'MEDIUM' | 'HIGH';
+  return true;
 };
 
 /**
@@ -71,7 +65,7 @@ const validateTaskPriority = (
 export const createTask = async (req: Request, res: Response) => {
   try {
     // Validate project ID
-    const projectId = validateProjectId(req.params.id, res);
+    const projectId = validateProjectId(req.params.projectId, res);
     if (projectId === null) return;
 
     // Get authenticated user
@@ -97,8 +91,8 @@ export const createTask = async (req: Request, res: Response) => {
     // Validate priority if provided
     let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | undefined;
     if (priority) {
-      validPriority = validateTaskPriority(priority, res);
-      if (validPriority === null) return;
+      if (!validateTaskPriority(priority, res)) return;
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH';
     }
 
     // Call service to create task
@@ -135,23 +129,34 @@ export const createTask = async (req: Request, res: Response) => {
 export const getTasks = async (req: Request, res: Response) => {
   try {
     // Validate project ID
-    const projectId = validateProjectId(req.params.id, res);
+    const projectId = validateProjectId(req.params.projectId, res);
     if (projectId === null) return;
 
     // Get optional filters from query params
     const { status, priority, assignedTo } = req.query;
 
     // Validate filters if provided
-    let validStatus: string | undefined;
+    let validStatus:
+      | 'BACKLOG'
+      | 'TODO'
+      | 'IN_PROGRESS'
+      | 'DONE'
+      | 'CANCELLED'
+      | undefined;
     if (status) {
-      validStatus = validateTaskStatus(status as string, res);
-      if (validStatus === null) return;
+      if (!validateTaskStatus(status as string, res)) return;
+      validStatus = status as
+        | 'BACKLOG'
+        | 'TODO'
+        | 'IN_PROGRESS'
+        | 'DONE'
+        | 'CANCELLED';
     }
 
-    let validPriority: string | undefined;
+    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | undefined;
     if (priority) {
-      validPriority = validateTaskPriority(priority as string, res);
-      if (validPriority === null) return;
+      if (!validateTaskPriority(priority as string, res)) return;
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH';
     }
 
     // Call service to get tasks with filters
@@ -256,15 +261,20 @@ export const updateTask = async (req: Request, res: Response) => {
       | 'CANCELLED'
       | undefined;
     if (status) {
-      validStatus = validateTaskStatus(status, res);
-      if (validStatus === null) return;
+      if (!validateTaskStatus(status, res)) return;
+      validStatus = status as
+        | 'BACKLOG'
+        | 'TODO'
+        | 'IN_PROGRESS'
+        | 'DONE'
+        | 'CANCELLED';
     }
 
     // Validate priority if provided
     let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | undefined;
     if (priority) {
-      validPriority = validateTaskPriority(priority, res);
-      if (validPriority === null) return;
+      if (!validateTaskPriority(priority, res)) return;
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH';
     }
 
     // Call service to update task
@@ -333,7 +343,7 @@ export const deleteTask = async (req: Request, res: Response) => {
 
 /**
  * ============================================
- * GET TASKS BY ASSIGNEE (My Tasks)
+ * GET MY TASKS
  * ============================================
  * Get all tasks assigned to authenticated user in an organization
  */
@@ -359,6 +369,51 @@ export const getMyTasks = async (req: Request, res: Response) => {
 
     // Call service to get user's tasks
     const tasks = await TaskService.getTasksByAssignee(userId, orgId);
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      message: 'User tasks retrieved successfully.',
+      data: tasks,
+    });
+  } catch (error: any) {
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to retrieve user tasks.',
+    });
+  }
+};
+
+/**
+ * ============================================
+ * GET TASKS BY SPECIFIC USER
+ * ============================================
+ * Get all tasks assigned to a specific user in an organization
+ */
+export const getTasksByAssignee = async (req: Request, res: Response) => {
+  try {
+    // Validate user ID
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID. Must be a number.',
+      });
+    }
+
+    // Get organizationId from query params (required)
+    const organizationId = parseInt(req.query.organizationId as string);
+    if (isNaN(organizationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organization ID is required. Pass ?organizationId=<id>',
+      });
+    }
+
+    // Call service to get user's tasks
+    const tasks = await TaskService.getTasksByAssignee(userId, organizationId);
 
     // Return success response
     res.status(200).json({

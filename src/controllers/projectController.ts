@@ -191,7 +191,7 @@ export const updateProject = async (req: Request, res: Response) => {
     }
 
     // Validate status if provided
-    let validStatus: 'ACTIVE' | 'ARCHIVED' | undefined;
+    let validStatus: 'ACTIVE' | 'ARCHIVED' | undefined | null = undefined;
     if (status) {
       validStatus = validateProjectStatus(status, res);
       if (validStatus === null) return;
