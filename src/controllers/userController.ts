@@ -18,7 +18,96 @@ const validateUserIdParam = (id: string, res: Response): number | null => {
 
   return parsedId;
 };
+/**
+ * POST /users/register
+ * Register a new user
+ */
+export const registerUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
 
+    // Validate required fields
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, password, firstName, and lastName are required.',
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format.',
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.',
+      });
+    }
+
+    // Register user
+    const user = await UserService.registerUser({
+      email,
+      password,
+      firstName,
+      lastName,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully.',
+      data: user,
+    });
+  } catch (error: any) {
+    // Check if user already exists
+    const statusCode = error.message.includes('already exists') ? 409 : 400;
+
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to register user.',
+    });
+  }
+};
+
+/**
+ * POST /users/login
+ * Login user and return token
+ */
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required.',
+      });
+    }
+
+    // Authenticate user
+    const result = await UserService.loginUser(email, password);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful.',
+      data: result,
+    });
+  } catch (error: any) {
+    const statusCode = error.message.includes('not found') ? 404 : 401;
+
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Login failed.',
+    });
+  }
+};
 /**
  * GET /users
  * Retrieve all users (requires authentication)

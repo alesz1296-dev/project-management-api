@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import {
+  registerUser,
+  loginUser,
   getAllUsers,
   getUserById,
   updateUserById,
@@ -8,6 +10,20 @@ import {
 } from '../controllers/userController';
 
 const router = Router();
+
+/**
+ * POST /users/register
+ * Register new user
+ * Auth: Not required
+ */
+router.post('/register', registerUser);
+
+/**
+ * POST /users/login
+ * Login user
+ * Auth: Not required
+ */
+router.post('/login', loginUser);
 
 /**
  * GET /users

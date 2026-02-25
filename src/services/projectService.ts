@@ -33,30 +33,43 @@ export class ProjectService {
       );
     }
 
-    // Create project
-    const project = await prisma.project.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        organizationId,
-        createdBy: userId,
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
+    // Create project and add creator as ADMIN in transaction
+    const project = await prisma.$transaction(async (tx) => {
+      // Create project
+      const newProject = await tx.project.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          organizationId,
+          createdBy: userId,
         },
-        organization: true,
-      },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          organization: true,
+        },
+      });
+
+      // Automatically add creator as ADMIN
+      await tx.projectMembership.create({
+        data: {
+          userId,
+          projectId: newProject.id,
+          role: 'ADMIN',
+        },
+      });
+
+      return newProject;
     });
 
     return project;
   }
-
   /**
    * ============================================
    * GET PROJECTS BY ORGANIZATION

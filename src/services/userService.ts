@@ -1,9 +1,10 @@
 import { prisma } from '../lib/prisma';
+import * as bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 export class UserService {
   static async getAllUsers() {
     const users = await prisma.user.findMany({
-      // .select() = choose which fields to return
       select: {
         id: true,
         email: true,
@@ -29,7 +30,6 @@ export class UserService {
       },
     });
 
-    // If user doesn't exists
     if (!user) {
       throw new Error('User not found.');
     }
@@ -50,7 +50,6 @@ export class UserService {
         createdAt: true,
       },
     });
-    //returns User object if success
     return updatedUser;
   }
 
@@ -60,5 +59,94 @@ export class UserService {
     });
 
     return deletedUser;
+  }
+
+  /**
+   * Register a new user with hashed password
+   */
+  static async registerUser(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+  }) {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new Error('User with this email already exists.');
+    }
+
+    // Hash password with bcrypt
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(data.password, saltRounds);
+
+    // Create new user with hashed password
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        passwordHash: passwordHash,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        createdAt: true,
+      },
+    });
+
+    return user;
+  }
+
+  /**
+   * Login user and return user data + token
+   */
+  /**
+   * Login user and return user data + JWT token
+   */
+  static async loginUser(email: string, password: string) {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        passwordHash: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    // Compare password with hashed password using bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new Error('Invalid password.');
+    }
+
+    // Remove passwordHash from response
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    // Generate JWT token
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const token = jwt.sign({ id: user.id, email: user.email }, secret, {
+      expiresIn: '24h',
+    });
+
+    return {
+      user: userWithoutPassword,
+      token,
+    };
   }
 }

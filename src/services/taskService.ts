@@ -461,7 +461,7 @@ function isValidStatusTransition(
   newStatus: string
 ): boolean {
   const validTransitions: Record<string, string[]> = {
-    BACKLOG: ['TODO', 'CANCELLED'],
+    BACKLOG: ['TODO', 'IN_PROGRESS', 'CANCELLED'],
     TODO: ['IN_PROGRESS', 'BACKLOG', 'CANCELLED'],
     IN_PROGRESS: ['DONE', 'TODO', 'CANCELLED'],
     DONE: ['CANCELLED'],
