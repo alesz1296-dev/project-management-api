@@ -1,12 +1,10 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import {
   addMember,
   removeMember,
   updateMemberRole,
   getOrganizationMembers,
-  getMemberById,
-  getUserMemberships,
 } from '../controllers/membershipController';
 
 const router = Router();
@@ -14,53 +12,45 @@ const router = Router();
 /**
  * POST /organizations/:orgId/members
  * Add member to organization
+ * Auth: Required in production, optional in development
  */
-router.post('/organizations/:orgId/members', authMiddleware, addMember);
-
-/**
- * GET /organizations/:orgId/members
- * Get all members of organization
- */
-router.get(
+router.post(
   '/organizations/:orgId/members',
-  authMiddleware,
-  getOrganizationMembers
-);
-
-/**
- * GET /organizations/:orgId/members/:userId
- * Get specific member by ID
- */
-router.get(
-  '/organizations/:orgId/members/:userId',
-  authMiddleware,
-  getMemberById
-);
-
-/**
- * PUT /organizations/:orgId/members/:userId
- * Update member role
- */
-router.put(
-  '/organizations/:orgId/members/:userId',
-  authMiddleware,
-  updateMemberRole
+  environmentalAuthMiddleware,
+  addMember
 );
 
 /**
  * DELETE /organizations/:orgId/members/:userId
  * Remove member from organization
+ * Auth: Required in production, optional in development
  */
 router.delete(
   '/organizations/:orgId/members/:userId',
-  authMiddleware,
+  environmentalAuthMiddleware,
   removeMember
 );
 
 /**
- * GET /users/memberships
- * Get all memberships for authenticated user
+ * PUT /organizations/:orgId/members/:userId
+ * Update member role
+ * Auth: Required in production, optional in development
  */
-router.get('/users/memberships', authMiddleware, getUserMemberships);
+router.put(
+  '/organizations/:orgId/members/:userId',
+  environmentalAuthMiddleware,
+  updateMemberRole
+);
+
+/**
+ * GET /organizations/:orgId/members
+ * Get all members in organization
+ * Auth: Required in production, optional in development
+ */
+router.get(
+  '/organizations/:orgId/members',
+  environmentalAuthMiddleware,
+  getOrganizationMembers
+);
 
 export default router;

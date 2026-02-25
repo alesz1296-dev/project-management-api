@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import {
   getAllUsers,
   getUserById,
@@ -12,29 +12,29 @@ const router = Router();
 /**
  * GET /users
  * Get all users
- * Requires: Authentication
+ * Auth: Required in production, optional in development
  */
-router.get('/', authMiddleware, getAllUsers);
+router.get('/', environmentalAuthMiddleware, getAllUsers);
 
 /**
  * GET /users/:id
  * Get single user by ID
- * Requires: Authentication
+ * Auth: Required in production, optional in development
  */
-router.get('/:id', authMiddleware, getUserById);
+router.get('/:id', environmentalAuthMiddleware, getUserById);
 
 /**
  * PUT /users/:id
  * Update user by ID
- * Requires: Authentication
+ * Auth: Required in production, optional in development
  */
-router.put('/:id', authMiddleware, updateUserById);
+router.put('/:id', environmentalAuthMiddleware, updateUserById);
 
 /**
  * DELETE /users/:id
  * Delete user by ID
- * Requires: Authentication
+ * Auth: Required in production, optional in development
  */
-router.delete('/:id', authMiddleware, deleteUserById);
+router.delete('/:id', environmentalAuthMiddleware, deleteUserById);
 
 export default router;

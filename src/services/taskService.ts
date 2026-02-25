@@ -5,7 +5,6 @@ export class TaskService {
    * ============================================
    * CREATE TASK
    * ============================================
-   * Tasks have status workflow and priority levels
    */
   static async createTask(
     projectId: number,
@@ -13,9 +12,9 @@ export class TaskService {
     data: {
       title: string;
       description?: string;
-      priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+      priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       assignedTo?: number;
-      dueDate?: string; // ISO date string
+      dueDate?: string;
     }
   ) {
     // Validate project exists
@@ -28,35 +27,32 @@ export class TaskService {
       throw new Error('Project not found.');
     }
 
-    // Check if user is member of organization
-    const membership = await prisma.membership.findUnique({
+    // ✅ CHECK: User is in project
+    const projectMembership = await prisma.projectMembership.findUnique({
       where: {
-        userId_organizationId: {
-          userId,
-          organizationId: project.organizationId,
-        },
+        userId_projectId: { userId, projectId },
       },
     });
 
-    if (!membership) {
-      throw new Error(
-        'Unauthorized. User is not a member of this organization.'
-      );
+    if (!projectMembership) {
+      throw new Error('Unauthorized. User is not in this project.');
     }
 
-    // If task is assigned to someone, verify they exist and are in org
+    // If task assigned, verify assignee is in PROJECT
     if (data.assignedTo) {
-      const assigneeMembership = await prisma.membership.findUnique({
+      const assigneeMembership = await prisma.projectMembership.findUnique({
         where: {
-          userId_organizationId: {
+          userId_projectId: {
             userId: data.assignedTo,
-            organizationId: project.organizationId,
+            projectId,
           },
         },
       });
 
       if (!assigneeMembership) {
-        throw new Error('Assigned user is not a member of this organization.');
+        throw new Error(
+          'Cannot assign task. User is not a member of this project.'
+        );
       }
     }
 
@@ -66,9 +62,10 @@ export class TaskService {
         title: data.title,
         description: data.description,
         projectId,
+        createdBy: userId,
         assignedTo: data.assignedTo,
         priority: data.priority || 'MEDIUM',
-        status: 'BACKLOG', // Tasks always start in BACKLOG
+        status: 'BACKLOG',
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
       },
       include: {
@@ -91,10 +88,11 @@ export class TaskService {
    * ============================================
    * GET TASKS BY PROJECT
    * ============================================
-   * Can filter by status, priority, and assignee
+   * ✅ NOW WITH PERMISSION CHECK
    */
   static async getTasks(
     projectId: number,
+    userId: number,
     filters?: {
       status?: string;
       priority?: string;
@@ -108,6 +106,17 @@ export class TaskService {
 
     if (!project) {
       throw new Error('Project not found.');
+    }
+
+    // ✅ CHECK: User is in project
+    const projectMembership = await prisma.projectMembership.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
+
+    if (!projectMembership) {
+      throw new Error('Unauthorized. User is not in this project.');
     }
 
     // Build where clause with filters
@@ -136,7 +145,7 @@ export class TaskService {
           },
         },
       },
-      orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }], // Sort by priority, then due date
+      orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
     });
 
     return tasks;
@@ -146,8 +155,9 @@ export class TaskService {
    * ============================================
    * GET TASK BY ID
    * ============================================
+   * ✅ NOW WITH PERMISSION CHECK
    */
-  static async getTask(id: number) {
+  static async getTask(id: number, userId: number) {
     // Get task with full details
     const task = await prisma.task.findUnique({
       where: { id },
@@ -170,6 +180,17 @@ export class TaskService {
       throw new Error('Task not found.');
     }
 
+    // ✅ CHECK: User is in project
+    const projectMembership = await prisma.projectMembership.findUnique({
+      where: {
+        userId_projectId: { userId, projectId: task.projectId },
+      },
+    });
+
+    if (!projectMembership) {
+      throw new Error('Unauthorized. User is not in this project.');
+    }
+
     return task;
   }
 
@@ -177,7 +198,6 @@ export class TaskService {
    * ============================================
    * UPDATE TASK
    * ============================================
-   * Can update status (workflow), priority, and assignee
    */
   static async updateTask(
     id: number,
@@ -186,7 +206,7 @@ export class TaskService {
       title?: string;
       description?: string;
       status?: 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
-      priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+      priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       assignedTo?: number;
       dueDate?: string;
     }
@@ -201,20 +221,18 @@ export class TaskService {
       throw new Error('Task not found.');
     }
 
-    // Check if user is member of organization
-    const membership = await prisma.membership.findUnique({
+    // Check if user is member of project
+    const projectMembership = await prisma.projectMembership.findUnique({
       where: {
-        userId_organizationId: {
+        userId_projectId: {
           userId,
-          organizationId: task.project.organizationId,
+          projectId: task.projectId,
         },
       },
     });
 
-    if (!membership) {
-      throw new Error(
-        'Unauthorized. User is not a member of this organization.'
-      );
+    if (!projectMembership) {
+      throw new Error('Unauthorized. User is not in this project.');
     }
 
     // Validate status workflow (prevent invalid transitions)
@@ -224,19 +242,21 @@ export class TaskService {
       );
     }
 
-    // If reassigning, verify new assignee is in org
+    // If reassigning, verify new assignee is in project
     if (data.assignedTo && data.assignedTo !== task.assignedTo) {
-      const assigneeMembership = await prisma.membership.findUnique({
+      const assigneeMembership = await prisma.projectMembership.findUnique({
         where: {
-          userId_organizationId: {
+          userId_projectId: {
             userId: data.assignedTo,
-            organizationId: task.project.organizationId,
+            projectId: task.projectId,
           },
         },
       });
 
       if (!assigneeMembership) {
-        throw new Error('Assigned user is not a member of this organization.');
+        throw new Error(
+          'Cannot assign task. User is not a member of this project.'
+        );
       }
     }
 
@@ -284,20 +304,18 @@ export class TaskService {
       throw new Error('Task not found.');
     }
 
-    // Check if user is member of organization
-    const membership = await prisma.membership.findUnique({
+    // Check if user is member of project
+    const projectMembership = await prisma.projectMembership.findUnique({
       where: {
-        userId_organizationId: {
+        userId_projectId: {
           userId,
-          organizationId: task.project.organizationId,
+          projectId: task.projectId,
         },
       },
     });
 
-    if (!membership) {
-      throw new Error(
-        'Unauthorized. User is not a member of this organization.'
-      );
+    if (!projectMembership) {
+      throw new Error('Unauthorized. User is not in this project.');
     }
 
     // Delete task
@@ -312,10 +330,10 @@ export class TaskService {
    * ============================================
    * GET TASKS BY ASSIGNEE (Across Projects)
    * ============================================
-   * Get all tasks assigned to a user across all projects
+   * ✅ NOW WITH PERMISSION CHECK
    */
   static async getTasksByAssignee(userId: number, organizationId: number) {
-    // Validate user is member of organization
+    // ✅ CHECK: User is in organization
     const membership = await prisma.membership.findUnique({
       where: {
         userId_organizationId: { userId, organizationId },
@@ -323,7 +341,7 @@ export class TaskService {
     });
 
     if (!membership) {
-      throw new Error('User is not a member of this organization.');
+      throw new Error('Unauthorized. User is not in this organization.');
     }
 
     // Get all tasks assigned to user in this org
@@ -334,8 +352,101 @@ export class TaskService {
       },
       include: {
         project: true,
+        assignee: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
       orderBy: [{ status: 'asc' }, { dueDate: 'asc' }],
+    });
+
+    return tasks;
+  }
+
+  /**
+   * ============================================
+   * GET MEMBERSHIP (Helper for permission checks)
+   * ============================================
+   */
+  static async getMembership(userId: number, organizationId: number) {
+    return await prisma.membership.findUnique({
+      where: {
+        userId_organizationId: { userId, organizationId },
+      },
+    });
+  }
+
+  /**
+   * ============================================
+   * GET ALL TASKS IN ORGANIZATION
+   * ============================================
+   * ✅ NOW WITH PERMISSION CHECK
+   */
+  static async getAllTasksInOrganization(
+    organizationId: number,
+    userId: number,
+    filters?: {
+      status?: string;
+      priority?: string;
+      assignedTo?: number;
+    }
+  ) {
+    // ✅ CHECK: User is in organization
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_organizationId: { userId, organizationId },
+      },
+    });
+
+    if (!membership) {
+      throw new Error('Unauthorized. User is not in this organization.');
+    }
+
+    // Validate organization exists
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      throw new Error('Organization not found.');
+    }
+
+    // Build where clause with filters
+    const where: any = {
+      project: { organizationId },
+    };
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+    if (filters?.priority) {
+      where.priority = filters.priority;
+    }
+    if (filters?.assignedTo) {
+      where.assignedTo = filters.assignedTo;
+    }
+
+    // Get all tasks in organization
+    const tasks = await prisma.task.findMany({
+      where,
+      include: {
+        project: {
+          select: { id: true, name: true, organizationId: true },
+        },
+        assignee: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
     });
 
     return tasks;
@@ -344,19 +455,17 @@ export class TaskService {
 
 /**
  * Helper function to validate task status workflow
- * Defines which status transitions are allowed
  */
 function isValidStatusTransition(
   currentStatus: string,
   newStatus: string
 ): boolean {
-  // Define valid transitions
   const validTransitions: Record<string, string[]> = {
     BACKLOG: ['TODO', 'CANCELLED'],
     TODO: ['IN_PROGRESS', 'BACKLOG', 'CANCELLED'],
     IN_PROGRESS: ['DONE', 'TODO', 'CANCELLED'],
-    DONE: ['CANCELLED'], // Can only cancel a done task
-    CANCELLED: [], // Cannot transition from cancelled
+    DONE: ['CANCELLED'],
+    CANCELLED: [],
   };
 
   const allowedTransitions = validTransitions[currentStatus] || [];

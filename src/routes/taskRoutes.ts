@@ -1,67 +1,92 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import {
   createTask,
-  getTasks,
+  getTasksByProject,
   getTask,
   updateTask,
   deleteTask,
+  getTasksByUser,
   getMyTasks,
-  getTasksByAssignee,
+  getAllTasksInOrganization,
+  getProjectTasksWithDetails,
 } from '../controllers/taskController';
 
 const router = Router();
 
+// ============================================
+// OPTION A: Personal & Team Views
+// ============================================
+
+/**
+ * GET /organizations/:orgId/tasks/my-tasks
+ * Get all tasks assigned to authenticated user
+ */
+router.get(
+  '/organizations/:orgId/tasks/my-tasks',
+  environmentalAuthMiddleware,
+  getMyTasks
+);
+
+/**
+ * GET /users/:userId/tasks?organizationId=<id>
+ * Get all tasks assigned to a specific user
+ * Permissions: User can view own tasks, leads/managers can view team
+ */
+router.get('/users/:userId/tasks', environmentalAuthMiddleware, getTasksByUser);
+
+// ============================================
+// OPTION B: Organization-wide & Project Views
+// ============================================
+
+/**
+ * GET /organizations/:orgId/tasks
+ * Get all tasks in organization with optional filters
+ * Filters: ?status=<status>&priority=<priority>&assignedTo=<userId>
+ */
+router.get(
+  '/organizations/:orgId/tasks',
+  environmentalAuthMiddleware,
+  getAllTasksInOrganization
+);
+
 /**
  * POST /projects/:projectId/tasks
  * Create new task in project
- * Requires: Authentication
- * Body: { title, description, status, priority, assignedTo, dueDate }
  */
-router.post('/projects/:projectId/tasks', authMiddleware, createTask);
+router.post(
+  '/projects/:projectId/tasks',
+  environmentalAuthMiddleware,
+  createTask
+);
 
 /**
  * GET /projects/:projectId/tasks
- * Get all tasks for project
- * Requires: Authentication
- * Query: ?status=TODO&priority=HIGH&assignedTo=5
+ * Get all tasks in project with optional filters
+ * Filters: ?status=<status>&priority=<priority>&assignedTo=<userId>
  */
-router.get('/projects/:projectId/tasks', authMiddleware, getTasks);
+router.get(
+  '/projects/:projectId/tasks',
+  environmentalAuthMiddleware,
+  getProjectTasksWithDetails
+);
 
 /**
  * GET /tasks/:id
  * Get single task by ID
- * Requires: Authentication
  */
-router.get('/tasks/:id', authMiddleware, getTask);
+router.get('/tasks/:id', environmentalAuthMiddleware, getTask);
 
 /**
  * PUT /tasks/:id
  * Update task by ID
- * Requires: Authentication
- * Body: { title, description, status, priority, assignedTo, dueDate }
  */
-router.put('/tasks/:id', authMiddleware, updateTask);
+router.put('/tasks/:id', environmentalAuthMiddleware, updateTask);
 
 /**
  * DELETE /tasks/:id
  * Delete task by ID
- * Requires: Authentication
  */
-router.delete('/tasks/:id', authMiddleware, deleteTask);
-
-/**
- * GET /organizations/:orgId/tasks/my-tasks
- * Get all tasks assigned to authenticated user in organization
- * Requires: Authentication
- */
-router.get('/organizations/:orgId/tasks/my-tasks', authMiddleware, getMyTasks);
-
-/**
- * GET /users/:userId/tasks
- * Get all tasks assigned to specific user
- * Requires: Authentication
- */
-router.get('/users/:userId/tasks', authMiddleware, getTasksByAssignee);
+router.delete('/tasks/:id', environmentalAuthMiddleware, deleteTask);
 
 export default router;

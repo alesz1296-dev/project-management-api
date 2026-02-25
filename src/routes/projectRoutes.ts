@@ -1,50 +1,109 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import {
   createProject,
-  getProjects,
+  getProjectsByOrganization,
   getProject,
   updateProject,
   deleteProject,
+  getProjectsByStatus,
+  addProjectMember,
+  getProjectMembers,
+  updateProjectMemberRole,
+  removeProjectMember,
 } from '../controllers/projectController';
 
 const router = Router();
 
 /**
  * POST /organizations/:orgId/projects
- * Create new project in organization
- * Requires: Authentication
- * Body: { name, description, status }
+ * Create new project
  */
-router.post('/organizations/:orgId/projects', authMiddleware, createProject);
+router.post(
+  '/organizations/:orgId/projects',
+  environmentalAuthMiddleware,
+  createProject
+);
 
 /**
  * GET /organizations/:orgId/projects
- * Get all projects for organization
- * Requires: Authentication
+ * Get all projects in organization
  */
-router.get('/organizations/:orgId/projects', authMiddleware, getProjects);
+router.get(
+  '/organizations/:orgId/projects',
+  environmentalAuthMiddleware,
+  getProjectsByOrganization
+);
 
 /**
  * GET /projects/:id
  * Get single project by ID
- * Requires: Authentication
  */
-router.get('/projects/:id', authMiddleware, getProject);
+router.get('/projects/:id', environmentalAuthMiddleware, getProject);
 
 /**
  * PUT /projects/:id
  * Update project by ID
- * Requires: Authentication
- * Body: { name, description, status }
  */
-router.put('/projects/:id', authMiddleware, updateProject);
+router.put('/projects/:id', environmentalAuthMiddleware, updateProject);
 
 /**
  * DELETE /projects/:id
  * Delete project by ID
- * Requires: Authentication
  */
-router.delete('/projects/:id', authMiddleware, deleteProject);
+router.delete('/projects/:id', environmentalAuthMiddleware, deleteProject);
+
+/**
+ * GET /projects/status/:status
+ * Get projects by status (ACTIVE or ARCHIVED)
+ */
+router.get(
+  '/projects/status/:status',
+  environmentalAuthMiddleware,
+  getProjectsByStatus
+);
+
+/**
+ * POST /projects/:projectId/members
+ * Add user to project team
+ * Permissions: Project ADMIN
+ */
+router.post(
+  '/projects/:projectId/members',
+  environmentalAuthMiddleware,
+  addProjectMember
+);
+
+/**
+ * GET /projects/:projectId/members
+ * List project team members
+ */
+router.get(
+  '/projects/:projectId/members',
+  environmentalAuthMiddleware,
+  getProjectMembers
+);
+
+/**
+ * PUT /projects/:projectId/members/:userId
+ * Update user role in project
+ * Permissions: Project ADMIN
+ */
+router.put(
+  '/projects/:projectId/members/:userId',
+  environmentalAuthMiddleware,
+  updateProjectMemberRole
+);
+
+/**
+ * DELETE /projects/:projectId/members/:userId
+ * Remove user from project
+ * Permissions: Project ADMIN
+ */
+router.delete(
+  '/projects/:projectId/members/:userId',
+  environmentalAuthMiddleware,
+  removeProjectMember
+);
 
 export default router;

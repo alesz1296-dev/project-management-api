@@ -3,9 +3,21 @@ import { TaskService } from '../services/taskService';
 
 /**
  * ============================================
- * VALIDATION HELPERS (DRY)
+ * HELPER FUNCTIONS (DRY)
  * ============================================
  */
+
+const getAuthenticatedUser = (req: Request, res: Response): number | null => {
+  const userId = (req.user as any).id;
+  if (!userId) {
+    res.status(401).json({
+      success: false,
+      message: 'Unauthorized. User not authenticated.',
+    });
+    return null;
+  }
+  return userId;
+};
 
 const validateProjectId = (id: string, res: Response): number | null => {
   const projectId = parseInt(id);
@@ -45,42 +57,38 @@ const validateTaskStatus = (status: string, res: Response): boolean => {
 };
 
 const validateTaskPriority = (priority: string, res: Response): boolean => {
-  const validPriorities = ['LOW', 'MEDIUM', 'HIGH'];
+  const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
   if (!validPriorities.includes(priority)) {
     res.status(400).json({
       success: false,
-      message: 'Invalid task priority. Must be LOW, MEDIUM, or HIGH.',
+      message: 'Invalid task priority. Must be LOW, MEDIUM, HIGH, or CRITICAL.',
     });
     return false;
   }
   return true;
 };
 
+const getErrorStatusCode = (error: any): number => {
+  if (error.message.includes('not found')) return 404;
+  if (error.message.includes('Unauthorized')) return 403;
+  return 400;
+};
+
 /**
  * ============================================
  * CREATE TASK
  * ============================================
- * Can set priority, due date, and assign to user
  */
 export const createTask = async (req: Request, res: Response) => {
   try {
-    // Validate project ID
     const projectId = validateProjectId(req.params.projectId, res);
     if (projectId === null) return;
 
-    // Get authenticated user
-    const userId = (req.user as any).id;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized. User not authenticated.',
-      });
-    }
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
 
-    // Get task data from request body
     const { title, description, priority, assignedTo, dueDate } = req.body;
 
-    // Validate title is provided
     if (!title) {
       return res.status(400).json({
         success: false,
@@ -88,14 +96,12 @@ export const createTask = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate priority if provided
-    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | undefined;
+    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | undefined;
     if (priority) {
       if (!validateTaskPriority(priority, res)) return;
-      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH';
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     }
 
-    // Call service to create task
     const task = await TaskService.createTask(projectId, userId, {
       title,
       description,
@@ -104,16 +110,13 @@ export const createTask = async (req: Request, res: Response) => {
       dueDate,
     });
 
-    // Return success response
     res.status(201).json({
       success: true,
       message: 'Task created successfully.',
       data: task,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to create task.',
     });
@@ -124,18 +127,17 @@ export const createTask = async (req: Request, res: Response) => {
  * ============================================
  * GET TASKS BY PROJECT
  * ============================================
- * Supports filtering by status, priority, and assignee
  */
-export const getTasks = async (req: Request, res: Response) => {
+export const getTasksByProject = async (req: Request, res: Response) => {
   try {
-    // Validate project ID
     const projectId = validateProjectId(req.params.projectId, res);
     if (projectId === null) return;
 
-    // Get optional filters from query params
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
+
     const { status, priority, assignedTo } = req.query;
 
-    // Validate filters if provided
     let validStatus:
       | 'BACKLOG'
       | 'TODO'
@@ -153,29 +155,25 @@ export const getTasks = async (req: Request, res: Response) => {
         | 'CANCELLED';
     }
 
-    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | undefined;
+    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | undefined;
     if (priority) {
       if (!validateTaskPriority(priority as string, res)) return;
-      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH';
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     }
 
-    // Call service to get tasks with filters
-    const tasks = await TaskService.getTasks(projectId, {
+    const tasks = await TaskService.getTasks(projectId, userId, {
       status: validStatus,
       priority: validPriority,
       assignedTo: assignedTo ? parseInt(assignedTo as string) : undefined,
     });
 
-    // Return success response
     res.status(200).json({
       success: true,
       message: 'Tasks retrieved successfully.',
       data: tasks,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to retrieve tasks.',
     });
@@ -189,23 +187,21 @@ export const getTasks = async (req: Request, res: Response) => {
  */
 export const getTask = async (req: Request, res: Response) => {
   try {
-    // Validate task ID
     const taskId = validateTaskId(req.params.id, res);
     if (taskId === null) return;
 
-    // Call service to get task
-    const task = await TaskService.getTask(taskId);
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
 
-    // Return success response
+    const task = await TaskService.getTask(taskId, userId);
+
     res.status(200).json({
       success: true,
       message: 'Task retrieved successfully.',
       data: task,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to retrieve task.',
     });
@@ -216,28 +212,18 @@ export const getTask = async (req: Request, res: Response) => {
  * ============================================
  * UPDATE TASK
  * ============================================
- * Can update status with workflow validation, priority, and assignee
  */
 export const updateTask = async (req: Request, res: Response) => {
   try {
-    // Validate task ID
     const taskId = validateTaskId(req.params.id, res);
     if (taskId === null) return;
 
-    // Get authenticated user
-    const userId = (req.user as any).id;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized. User not authenticated.',
-      });
-    }
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
 
-    // Get update data from request body
     const { title, description, status, priority, assignedTo, dueDate } =
       req.body;
 
-    // Validate at least one field is provided
     if (
       !title &&
       !description &&
@@ -252,7 +238,6 @@ export const updateTask = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate status if provided
     let validStatus:
       | 'BACKLOG'
       | 'TODO'
@@ -270,14 +255,12 @@ export const updateTask = async (req: Request, res: Response) => {
         | 'CANCELLED';
     }
 
-    // Validate priority if provided
-    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | undefined;
+    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | undefined;
     if (priority) {
       if (!validateTaskPriority(priority, res)) return;
-      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH';
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     }
 
-    // Call service to update task
     const updatedTask = await TaskService.updateTask(taskId, userId, {
       title,
       description,
@@ -287,16 +270,13 @@ export const updateTask = async (req: Request, res: Response) => {
       dueDate,
     });
 
-    // Return success response
     res.status(200).json({
       success: true,
       message: 'Task updated successfully.',
       data: updatedTask,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to update task.',
     });
@@ -310,31 +290,20 @@ export const updateTask = async (req: Request, res: Response) => {
  */
 export const deleteTask = async (req: Request, res: Response) => {
   try {
-    // Validate task ID
     const taskId = validateTaskId(req.params.id, res);
     if (taskId === null) return;
 
-    // Get authenticated user
-    const userId = (req.user as any).id;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized. User not authenticated.',
-      });
-    }
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
 
-    // Call service to delete task
     const result = await TaskService.deleteTask(taskId, userId);
 
-    // Return success response
     res.status(200).json({
       success: true,
       message: result.message,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to delete task.',
     });
@@ -345,11 +314,9 @@ export const deleteTask = async (req: Request, res: Response) => {
  * ============================================
  * GET MY TASKS
  * ============================================
- * Get all tasks assigned to authenticated user in an organization
  */
 export const getMyTasks = async (req: Request, res: Response) => {
   try {
-    // Validate organization ID
     const orgId = parseInt(req.params.orgId);
     if (isNaN(orgId)) {
       return res.status(400).json({
@@ -358,28 +325,18 @@ export const getMyTasks = async (req: Request, res: Response) => {
       });
     }
 
-    // Get authenticated user
-    const userId = (req.user as any).id;
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized. User not authenticated.',
-      });
-    }
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
 
-    // Call service to get user's tasks
     const tasks = await TaskService.getTasksByAssignee(userId, orgId);
 
-    // Return success response
     res.status(200).json({
       success: true,
       message: 'User tasks retrieved successfully.',
       data: tasks,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to retrieve user tasks.',
     });
@@ -390,11 +347,10 @@ export const getMyTasks = async (req: Request, res: Response) => {
  * ============================================
  * GET TASKS BY SPECIFIC USER
  * ============================================
- * Get all tasks assigned to a specific user in an organization
+ * Permissions: User can view their own tasks or managers/leads can view team member tasks
  */
-export const getTasksByAssignee = async (req: Request, res: Response) => {
+export const getTasksByUser = async (req: Request, res: Response) => {
   try {
-    // Validate user ID
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
       return res.status(400).json({
@@ -403,7 +359,6 @@ export const getTasksByAssignee = async (req: Request, res: Response) => {
       });
     }
 
-    // Get organizationId from query params (required)
     const organizationId = parseInt(req.query.organizationId as string);
     if (isNaN(organizationId)) {
       return res.status(400).json({
@@ -412,21 +367,181 @@ export const getTasksByAssignee = async (req: Request, res: Response) => {
       });
     }
 
-    // Call service to get user's tasks
+    const requestingUserId = getAuthenticatedUser(req, res);
+    if (requestingUserId === null) return;
+
+    // Permission check: User can view their own tasks OR if they are a manager/lead
+    if (userId !== requestingUserId) {
+      const requesterMembership = await TaskService.getMembership(
+        requestingUserId,
+        organizationId
+      );
+
+      if (
+        !requesterMembership ||
+        !['OWNER', 'ADMIN'].includes(requesterMembership.role)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You do not have permission to view this user's tasks. Only admins can view team member tasks.",
+        });
+      }
+    }
+
     const tasks = await TaskService.getTasksByAssignee(userId, organizationId);
 
-    // Return success response
     res.status(200).json({
       success: true,
       message: 'User tasks retrieved successfully.',
       data: tasks,
     });
   } catch (error: any) {
-    const statusCode = error.message.includes('not found') ? 404 : 400;
-
-    res.status(statusCode).json({
+    res.status(getErrorStatusCode(error)).json({
       success: false,
       message: error.message || 'Failed to retrieve user tasks.',
+    });
+  }
+};
+
+/**
+ * ============================================
+ * GET ALL TASKS IN ORGANIZATION
+ * ============================================
+ */
+export const getAllTasksInOrganization = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const orgId = parseInt(req.params.orgId);
+    if (isNaN(orgId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid organization ID. Must be a number.',
+      });
+    }
+
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
+
+    const { status, priority, assignedTo } = req.query;
+
+    let validStatus:
+      | 'BACKLOG'
+      | 'TODO'
+      | 'IN_PROGRESS'
+      | 'DONE'
+      | 'CANCELLED'
+      | undefined;
+    if (status) {
+      if (!validateTaskStatus(status as string, res)) return;
+      validStatus = status as
+        | 'BACKLOG'
+        | 'TODO'
+        | 'IN_PROGRESS'
+        | 'DONE'
+        | 'CANCELLED';
+    }
+
+    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | undefined;
+    if (priority) {
+      if (!validateTaskPriority(priority as string, res)) return;
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    }
+
+    const tasks = await TaskService.getAllTasksInOrganization(orgId, userId, {
+      status: validStatus,
+      priority: validPriority,
+      assignedTo: assignedTo ? parseInt(assignedTo as string) : undefined,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Organization tasks retrieved successfully.',
+      data: tasks,
+    });
+  } catch (error: any) {
+    res.status(getErrorStatusCode(error)).json({
+      success: false,
+      message: error.message || 'Failed to retrieve organization tasks.',
+    });
+  }
+};
+
+/**
+ * ============================================
+ * GET PROJECT TASKS WITH DETAILS
+ * ============================================
+ */
+export const getProjectTasksWithDetails = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const projectId = validateProjectId(req.params.projectId, res);
+    if (projectId === null) return;
+
+    const userId = getAuthenticatedUser(req, res);
+    if (userId === null) return;
+
+    const { status, priority, assignedTo } = req.query;
+
+    let validStatus:
+      | 'BACKLOG'
+      | 'TODO'
+      | 'IN_PROGRESS'
+      | 'DONE'
+      | 'CANCELLED'
+      | undefined;
+    if (status) {
+      if (!validateTaskStatus(status as string, res)) return;
+      validStatus = status as
+        | 'BACKLOG'
+        | 'TODO'
+        | 'IN_PROGRESS'
+        | 'DONE'
+        | 'CANCELLED';
+    }
+
+    let validPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | undefined;
+    if (priority) {
+      if (!validateTaskPriority(priority as string, res)) return;
+      validPriority = priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    }
+
+    const tasks = await TaskService.getTasks(projectId, userId, {
+      status: validStatus,
+      priority: validPriority,
+      assignedTo: assignedTo ? parseInt(assignedTo as string) : undefined,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Tasks retrieved successfully.',
+      data: tasks,
+      summary: {
+        total: tasks.length,
+        byStatus: tasks.reduce(
+          (acc: Record<string, number>, task: any) => {
+            acc[task.status] = (acc[task.status] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+        byPriority: tasks.reduce(
+          (acc: Record<string, number>, task: any) => {
+            acc[task.priority] = (acc[task.priority] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+      },
+    });
+  } catch (error: any) {
+    res.status(getErrorStatusCode(error)).json({
+      success: false,
+      message: error.message || 'Failed to retrieve tasks.',
     });
   }
 };

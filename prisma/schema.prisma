@@ -3,7 +3,7 @@
 // ============================================
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")  //
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -13,7 +13,6 @@ generator client {
 // ============================================
 // USER MODEL
 // ============================================
-// Represents a person using the system
 model User {
   id                    Int              @id @default(autoincrement())
   email                 String           @unique
@@ -25,14 +24,11 @@ model User {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   
-  // Relations - IMPORTANT: Add opposite side for each relation
-  memberships           Membership[]                        // User in many organizations
-  tasks                 Task[]           @relation("TaskAssignee")  // Tasks assigned to user
-  
-  // NEW: User can own many organizations
+  // Relations
+  memberships           Membership[]                        // Org-level memberships
+  projectMemberships    ProjectMembership[]                 // Project-level memberships
+  tasks                 Task[]           @relation("TaskAssignee")
   ownedOrganizations    Organization[]   @relation(name: "OrgOwner")
-  
-  // NEW: User can create many projects
   createdProjects       Project[]        @relation(name: "ProjectCreator")
   
   @@index([email])
@@ -41,14 +37,12 @@ model User {
 // ============================================
 // ORGANIZATION MODEL
 // ============================================
-// Represents a company/team
 model Organization {
   id                    Int              @id @default(autoincrement())
   name                  String
   description           String?
   slug                  String           @unique
   
-  // Who owns this organization?
   ownerId               Int
   owner                 User             @relation(name: "OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   
@@ -64,7 +58,7 @@ model Organization {
 }
 
 // ============================================
-// MEMBERSHIP MODEL (Multi-Tenancy Key)
+// MEMBERSHIP MODEL (Organization-level)
 // ============================================
 // Represents "User X is in Organization Y with Role Z"
 model Membership {
@@ -76,7 +70,7 @@ model Membership {
   user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
-  role                  Role             @default(MEMBER)
+  role                  OrgRole          @default(MEMBER)
   
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
@@ -87,9 +81,9 @@ model Membership {
 }
 
 // ============================================
-// ROLE ENUM
+// ORGANIZATION ROLE ENUM
 // ============================================
-enum Role {
+enum OrgRole {
   OWNER
   ADMIN
   MEMBER
@@ -98,7 +92,6 @@ enum Role {
 // ============================================
 // PROJECT MODEL
 // ============================================
-// Represents a group of related tasks
 model Project {
   id                    Int              @id @default(autoincrement())
   name                  String
@@ -107,7 +100,6 @@ model Project {
   organizationId        Int
   organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
-  // Who created it?
   createdBy             Int
   creator               User             @relation(name: "ProjectCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   
@@ -118,6 +110,7 @@ model Project {
   
   // Relations
   tasks                 Task[]
+  projectMemberships    ProjectMembership[]  // NEW: Project-level memberships
   
   @@index([organizationId])
   @@index([createdBy])
@@ -132,9 +125,42 @@ enum ProjectStatus {
 }
 
 // ============================================
+// PROJECT MEMBERSHIP MODEL (NEW)
+// ============================================
+// Represents "User X is in Project Y with Role Z"
+// Only users with org membership can have project membership
+model ProjectMembership {
+  id                    Int              @id @default(autoincrement())
+  
+  userId                Int
+  projectId             Int
+  
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project               Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  role                  ProjectRole      @default(MEMBER)
+  
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// ============================================
+// PROJECT ROLE ENUM (NEW)
+// ============================================
+enum ProjectRole {
+  ADMIN       // Can manage project & team
+  LEAD        // Can manage tasks & assign
+  MEMBER      // Can view & edit own tasks
+  VIEWER      // Read-only access
+}
+
+// ============================================
 // TASK MODEL
 // ============================================
-// Represents a single work item
 model Task {
   id                    Int              @id @default(autoincrement())
   title                 String
@@ -143,7 +169,10 @@ model Task {
   projectId             Int
   project               Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
-  // Who is this task assigned to?
+  // Task creator (for audit)
+  createdBy             Int?
+  
+  // Who is this task assigned to? MUST be in project team
   assignedTo            Int?
   assignee              User?            @relation(name: "TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
   
@@ -177,5 +206,5 @@ enum TaskPriority {
   LOW
   MEDIUM
   HIGH
-  URGENT
+  CRITICAL
 }
