@@ -1,69 +1,76 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { JwtPayload } from '../types/auth';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
-/**
- * authMiddlewares
- * Checks if incoming requests has valid token (protection rules)
- */
-
-/**
- * Add user property to Express Request
- * This lets us access req.user in controllers
- */
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload; // Will contain { id, email }
+      user?: JwtPayload & { id: number; email: string };
     }
   }
 }
 
 /**
- * Middleware that checks if request has valid JWT token
- *
- * Flow:
- * 1. Extract token from Authorization header
- * 2. Verify token signature
- * 3. If valid, attach user to request
- * 4. If invalid, reject request
- *
- * Usage:
- * router.get('/protected', authMiddleware, (req, res) => {
- *   // req.user is now available
- *   console.log(req.user.id)  // User ID
- * })
+ * ============================================
+ * AUTHENTICATE MIDDLEWARE
+ * ============================================
+ * Verifies JWT token from Authorization header
+ * Attaches decoded user to req.user
  */
-export const authMiddleware = (
+export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // Get Authorization header
-    // Expected format: "Bearer eyJhbGciOiJIUzI1NiIs..."
+    // Get token from Authorization header
     const authHeader = req.headers.authorization;
-
-    // Check header exists and starts with "Bearer "
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res
-        .status(401)
-        .json({ error: 'Missing or invalid authorization header' });
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided',
+      });
     }
 
-    // Extract token (remove "Bearer " prefix)
-    const token = authHeader.substring(7); // Remove first 7 chars ("Bearer ")
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Verify token is valid and not expired
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    // Verify and decode token
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'your-secret-key'
+    ) as JwtPayload & { id: number; email: string };
 
-    // Attach user to request object
-    req.user = payload;
-
-    // Continue to next middleware/controller
+    // Attach user to request
+    req.user = decoded;
     next();
   } catch (error) {
-    // Token invalid or expired
-    res.status(401).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token',
+    });
   }
+};
+
+/**
+ * ============================================
+ * ENVIRONMENTAL AUTH MIDDLEWARE
+ * ============================================
+ * Development: Bypasses auth and sets mock user
+ * Production: Requires valid JWT token
+ */
+export const environmentalAuthMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // Development mode - skip auth
+  if (process.env.NODE_ENV === 'development') {
+    req.user = { id: 1, email: 'dev@example.com' } as JwtPayload & {
+      id: number;
+      email: string;
+    };
+    return next();
+  }
+
+  // Production mode - require auth
+  authenticate(req, res, next);
 };

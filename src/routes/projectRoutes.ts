@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import { asyncHandler } from '../middlewares/errorHandler';
+import { validate } from '../middlewares/validationMiddleware';
 import {
   createProject,
   getProjectsByOrganization,
@@ -13,22 +14,33 @@ import {
   updateProjectMemberRole,
   removeProjectMember,
 } from '../controllers/projectController';
+import { createTask } from '../controllers/taskController';
+import {
+  createProjectSchema,
+  updateProjectSchema,
+} from '../validators/projectValidationSchemas';
+import { createTaskSchema } from '../validators/taskValidationSchemas';
 
 const router = Router();
 
 /**
- * POST /organizations/:orgId/projects
- * Create new project
+ * ============================================
+ * CREATE PROJECT
+ * ============================================
+ * POST /api/organizations/:orgId/projects
  */
 router.post(
   '/organizations/:orgId/projects',
   environmentalAuthMiddleware,
+  validate(createProjectSchema),
   asyncHandler(createProject)
 );
 
 /**
- * GET /organizations/:orgId/projects
- * Get all projects in organization
+ * ============================================
+ * GET PROJECTS BY ORGANIZATION
+ * ============================================
+ * GET /api/organizations/:orgId/projects
  */
 router.get(
   '/organizations/:orgId/projects',
@@ -37,8 +49,10 @@ router.get(
 );
 
 /**
- * GET /projects/:id
- * Get single project by ID
+ * ============================================
+ * GET PROJECT BY ID
+ * ============================================
+ * GET /api/projects/:id
  */
 router.get(
   '/projects/:id',
@@ -47,18 +61,23 @@ router.get(
 );
 
 /**
- * PUT /projects/:id
- * Update project by ID
+ * ============================================
+ * UPDATE PROJECT
+ * ============================================
+ * PUT /api/projects/:id
  */
 router.put(
   '/projects/:id',
   environmentalAuthMiddleware,
+  validate(updateProjectSchema),
   asyncHandler(updateProject)
 );
 
 /**
- * DELETE /projects/:id
- * Delete project by ID
+ * ============================================
+ * DELETE PROJECT
+ * ============================================
+ * DELETE /api/projects/:id
  */
 router.delete(
   '/projects/:id',
@@ -67,8 +86,10 @@ router.delete(
 );
 
 /**
- * GET /projects/status/:status
- * Get projects by status (ACTIVE or ARCHIVED)
+ * ============================================
+ * GET PROJECTS BY STATUS
+ * ============================================
+ * GET /api/projects/status/:status
  */
 router.get(
   '/projects/status/:status',
@@ -77,9 +98,23 @@ router.get(
 );
 
 /**
- * POST /projects/:projectId/members
- * Add user to project team
- * Permissions: Project ADMIN
+ * ============================================
+ * CREATE TASK IN PROJECT
+ * ============================================
+ * POST /api/projects/:projectId/tasks
+ */
+router.post(
+  '/projects/:projectId/tasks',
+  environmentalAuthMiddleware,
+  validate(createTaskSchema),
+  asyncHandler(createTask)
+);
+
+/**
+ * ============================================
+ * ADD PROJECT MEMBER
+ * ============================================
+ * POST /api/projects/:projectId/members
  */
 router.post(
   '/projects/:projectId/members',
@@ -88,8 +123,10 @@ router.post(
 );
 
 /**
- * GET /projects/:projectId/members
- * List project team members
+ * ============================================
+ * GET PROJECT MEMBERS
+ * ============================================
+ * GET /api/projects/:projectId/members
  */
 router.get(
   '/projects/:projectId/members',
@@ -98,9 +135,10 @@ router.get(
 );
 
 /**
- * PUT /projects/:projectId/members/:userId
- * Update user role in project
- * Permissions: Project ADMIN
+ * ============================================
+ * UPDATE PROJECT MEMBER ROLE
+ * ============================================
+ * PUT /api/projects/:projectId/members/:userId
  */
 router.put(
   '/projects/:projectId/members/:userId',
@@ -109,9 +147,10 @@ router.put(
 );
 
 /**
- * DELETE /projects/:projectId/members/:userId
- * Remove user from project
- * Permissions: Project ADMIN
+ * ============================================
+ * REMOVE PROJECT MEMBER
+ * ============================================
+ * DELETE /api/projects/:projectId/members/:userId
  */
 router.delete(
   '/projects/:projectId/members/:userId',

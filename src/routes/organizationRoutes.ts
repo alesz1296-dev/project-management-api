@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
 import { asyncHandler } from '../middlewares/errorHandler';
+import { validate } from '../middlewares/validationMiddleware';
+import {
+  createOrganizationSchema,
+  updateOrganizationSchema,
+} from '../validators/organizationValidationSchemas';
 import {
   createOrganization,
   getOrganizationsByUser,
@@ -12,16 +17,24 @@ import {
 const router = Router();
 
 /**
- * POST /organizations
+ * POST /api/organizations
  * Create new organization
- * Auth: Required in production, optional in development
+ * @param name - Organization name (required)
+ * @param description - Organization description (optional)
+ * @param logo - Organization logo URL (optional)
+ * @returns Created organization
  */
-router.post('/', environmentalAuthMiddleware, asyncHandler(createOrganization));
+router.post(
+  '/',
+  environmentalAuthMiddleware,
+  validate(createOrganizationSchema),
+  asyncHandler(createOrganization)
+);
 
 /**
- * GET /organizations
- * Get all organizations for authenticated user
- * Auth: Required in production, optional in development
+ * GET /api/organizations
+ * Get all organizations for the authenticated user
+ * @returns Array of organizations
  */
 router.get(
   '/',
@@ -30,27 +43,34 @@ router.get(
 );
 
 /**
- * GET /organizations/:id
- * Get single organization by ID
- * Auth: Required in production, optional in development
+ * GET /api/organizations/:id
+ * Get a single organization by ID
+ * @param id - Organization ID
+ * @returns Organization details
  */
 router.get('/:id', environmentalAuthMiddleware, asyncHandler(getOrganization));
 
 /**
- * PUT /organizations/:id
- * Update organization by ID
- * Auth: Required in production, optional in development
+ * PUT /api/organizations/:id
+ * Update an organization
+ * @param id - Organization ID
+ * @param name - Organization name (optional)
+ * @param description - Organization description (optional)
+ * @param logo - Organization logo URL (optional)
+ * @returns Updated organization
  */
 router.put(
   '/:id',
   environmentalAuthMiddleware,
+  validate(updateOrganizationSchema),
   asyncHandler(updateOrganization)
 );
 
 /**
- * DELETE /organizations/:id
- * Delete organization by ID
- * Auth: Required in production, optional in development
+ * DELETE /api/organizations/:id
+ * Delete an organization
+ * @param id - Organization ID
+ * @returns Success message
  */
 router.delete(
   '/:id',

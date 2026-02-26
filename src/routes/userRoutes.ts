@@ -1,6 +1,4 @@
 import { Router } from 'express';
-import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
-import { asyncHandler } from '../middlewares/errorHandler';
 import {
   registerUser,
   loginUser,
@@ -9,53 +7,24 @@ import {
   updateUserById,
   deleteUserById,
 } from '../controllers/userController';
+import { validate } from '../middlewares/validationMiddleware';
+import {
+  registerUserSchema,
+  loginUserSchema,
+  updateUserSchema,
+} from '../validators/userValidationSchemas';
+import { authenticate } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-/**
- * POST /users/register
- * Register new user
- * Auth: Not required
- */
-router.post('/register', asyncHandler(registerUser)); // async handler
+// Public routes
+router.post('/register', validate(registerUserSchema), registerUser);
+router.post('/login', validate(loginUserSchema), loginUser);
 
-/**
- * POST /users/login
- * Login user
- * Auth: Not required
- */
-router.post('/login', asyncHandler(loginUser)); // async handler
-
-/**
- * GET /users
- * Get all users
- * Auth: Required in production, optional in development
- */
-router.get('/', environmentalAuthMiddleware, asyncHandler(getAllUsers));
-
-/**
- * GET /users/:id
- * Get single user by ID
- * Auth: Required in production, optional in development
- */
-router.get('/:id', environmentalAuthMiddleware, asyncHandler(getUserById));
-
-/**
- * PUT /users/:id
- * Update user by ID
- * Auth: Required in production, optional in development
- */
-router.put('/:id', environmentalAuthMiddleware, asyncHandler(updateUserById));
-
-/**
- * DELETE /users/:id
- * Delete user by ID
- * Auth: Required in production, optional in development
- */
-router.delete(
-  '/:id',
-  environmentalAuthMiddleware,
-  asyncHandler(deleteUserById)
-);
+// Protected routes
+router.get('/', authenticate, getAllUsers);
+router.get('/:id', authenticate, getUserById);
+router.put('/:id', authenticate, validate(updateUserSchema), updateUserById);
+router.delete('/:id', authenticate, deleteUserById);
 
 export default router;

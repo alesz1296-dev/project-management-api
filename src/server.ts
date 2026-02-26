@@ -1,11 +1,3 @@
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-    }
-  }
-}
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -50,9 +42,9 @@ app.use((req, res, next) => {
 
 app.use('/api/users', userRoutes);
 app.use('/api/organizations', organizationRoutes);
-app.use('/api', membershipRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use('/api', projectRoutes);
-app.use('/api', taskRoutes);
+app.use('/api', membershipRoutes);
 
 // ============================================
 // HEALTH CHECK ENDPOINTS
