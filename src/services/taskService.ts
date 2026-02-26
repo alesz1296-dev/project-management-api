@@ -27,7 +27,7 @@ export class TaskService {
       throw new Error('Project not found.');
     }
 
-    // ✅ CHECK: User is in project
+    // CHECK: User is in project
     const projectMembership = await prisma.projectMembership.findUnique({
       where: {
         userId_projectId: { userId, projectId },
@@ -88,7 +88,7 @@ export class TaskService {
    * ============================================
    * GET TASKS BY PROJECT
    * ============================================
-   * ✅ NOW WITH PERMISSION CHECK
+   * NOW WITH PERMISSION CHECK
    */
   static async getTasks(
     projectId: number,
@@ -108,7 +108,7 @@ export class TaskService {
       throw new Error('Project not found.');
     }
 
-    // ✅ CHECK: User is in project
+    // CHECK: User is in project
     const projectMembership = await prisma.projectMembership.findUnique({
       where: {
         userId_projectId: { userId, projectId },
@@ -155,7 +155,7 @@ export class TaskService {
    * ============================================
    * GET TASK BY ID
    * ============================================
-   * ✅ NOW WITH PERMISSION CHECK
+   * NOW WITH PERMISSION CHECK
    */
   static async getTask(id: number, userId: number) {
     // Get task with full details
@@ -180,7 +180,7 @@ export class TaskService {
       throw new Error('Task not found.');
     }
 
-    // ✅ CHECK: User is in project
+    // CHECK: User is in project
     const projectMembership = await prisma.projectMembership.findUnique({
       where: {
         userId_projectId: { userId, projectId: task.projectId },
@@ -330,10 +330,9 @@ export class TaskService {
    * ============================================
    * GET TASKS BY ASSIGNEE (Across Projects)
    * ============================================
-   * ✅ NOW WITH PERMISSION CHECK
    */
   static async getTasksByAssignee(userId: number, organizationId: number) {
-    // ✅ CHECK: User is in organization
+    // CHECK: User is in organization
     const membership = await prisma.membership.findUnique({
       where: {
         userId_organizationId: { userId, organizationId },
@@ -384,7 +383,7 @@ export class TaskService {
    * ============================================
    * GET ALL TASKS IN ORGANIZATION
    * ============================================
-   * ✅ NOW WITH PERMISSION CHECK
+   *  NOW WITH PERMISSION CHECK
    */
   static async getAllTasksInOrganization(
     organizationId: number,
@@ -395,7 +394,7 @@ export class TaskService {
       assignedTo?: number;
     }
   ) {
-    // ✅ CHECK: User is in organization
+    // CHECK: User is in organization
     const membership = await prisma.membership.findUnique({
       where: {
         userId_organizationId: { userId, organizationId },

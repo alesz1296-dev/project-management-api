@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
+import { asyncHandler } from '../middlewares/errorHandler';
 import {
   createTask,
   getTasksByProject,
@@ -14,10 +15,6 @@ import {
 
 const router = Router();
 
-// ============================================
-// OPTION A: Personal & Team Views
-// ============================================
-
 /**
  * GET /organizations/:orgId/tasks/my-tasks
  * Get all tasks assigned to authenticated user
@@ -25,7 +22,7 @@ const router = Router();
 router.get(
   '/organizations/:orgId/tasks/my-tasks',
   environmentalAuthMiddleware,
-  getMyTasks
+  asyncHandler(getMyTasks)
 );
 
 /**
@@ -33,11 +30,11 @@ router.get(
  * Get all tasks assigned to a specific user
  * Permissions: User can view own tasks, leads/managers can view team
  */
-router.get('/users/:userId/tasks', environmentalAuthMiddleware, getTasksByUser);
-
-// ============================================
-// OPTION B: Organization-wide & Project Views
-// ============================================
+router.get(
+  '/users/:userId/tasks',
+  environmentalAuthMiddleware,
+  asyncHandler(getTasksByUser)
+);
 
 /**
  * GET /organizations/:orgId/tasks
@@ -47,7 +44,7 @@ router.get('/users/:userId/tasks', environmentalAuthMiddleware, getTasksByUser);
 router.get(
   '/organizations/:orgId/tasks',
   environmentalAuthMiddleware,
-  getAllTasksInOrganization
+  asyncHandler(getAllTasksInOrganization)
 );
 
 /**
@@ -57,7 +54,7 @@ router.get(
 router.post(
   '/projects/:projectId/tasks',
   environmentalAuthMiddleware,
-  createTask
+  asyncHandler(createTask)
 );
 
 /**
@@ -68,25 +65,29 @@ router.post(
 router.get(
   '/projects/:projectId/tasks',
   environmentalAuthMiddleware,
-  getProjectTasksWithDetails
+  asyncHandler(getProjectTasksWithDetails)
 );
 
 /**
  * GET /tasks/:id
  * Get single task by ID
  */
-router.get('/tasks/:id', environmentalAuthMiddleware, getTask);
+router.get('/tasks/:id', environmentalAuthMiddleware, asyncHandler(getTask));
 
 /**
  * PUT /tasks/:id
  * Update task by ID
  */
-router.put('/tasks/:id', environmentalAuthMiddleware, updateTask);
+router.put('/tasks/:id', environmentalAuthMiddleware, asyncHandler(updateTask));
 
 /**
  * DELETE /tasks/:id
  * Delete task by ID
  */
-router.delete('/tasks/:id', environmentalAuthMiddleware, deleteTask);
+router.delete(
+  '/tasks/:id',
+  environmentalAuthMiddleware,
+  asyncHandler(deleteTask)
+);
 
 export default router;

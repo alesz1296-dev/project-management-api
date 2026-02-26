@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
+import { asyncHandler } from '../middlewares/errorHandler';
 import {
   createProject,
   getProjectsByOrganization,
@@ -22,7 +23,7 @@ const router = Router();
 router.post(
   '/organizations/:orgId/projects',
   environmentalAuthMiddleware,
-  createProject
+  asyncHandler(createProject)
 );
 
 /**
@@ -32,26 +33,38 @@ router.post(
 router.get(
   '/organizations/:orgId/projects',
   environmentalAuthMiddleware,
-  getProjectsByOrganization
+  asyncHandler(getProjectsByOrganization)
 );
 
 /**
  * GET /projects/:id
  * Get single project by ID
  */
-router.get('/projects/:id', environmentalAuthMiddleware, getProject);
+router.get(
+  '/projects/:id',
+  environmentalAuthMiddleware,
+  asyncHandler(getProject)
+);
 
 /**
  * PUT /projects/:id
  * Update project by ID
  */
-router.put('/projects/:id', environmentalAuthMiddleware, updateProject);
+router.put(
+  '/projects/:id',
+  environmentalAuthMiddleware,
+  asyncHandler(updateProject)
+);
 
 /**
  * DELETE /projects/:id
  * Delete project by ID
  */
-router.delete('/projects/:id', environmentalAuthMiddleware, deleteProject);
+router.delete(
+  '/projects/:id',
+  environmentalAuthMiddleware,
+  asyncHandler(deleteProject)
+);
 
 /**
  * GET /projects/status/:status
@@ -60,7 +73,7 @@ router.delete('/projects/:id', environmentalAuthMiddleware, deleteProject);
 router.get(
   '/projects/status/:status',
   environmentalAuthMiddleware,
-  getProjectsByStatus
+  asyncHandler(getProjectsByStatus)
 );
 
 /**
@@ -71,7 +84,7 @@ router.get(
 router.post(
   '/projects/:projectId/members',
   environmentalAuthMiddleware,
-  addProjectMember
+  asyncHandler(addProjectMember)
 );
 
 /**
@@ -81,7 +94,7 @@ router.post(
 router.get(
   '/projects/:projectId/members',
   environmentalAuthMiddleware,
-  getProjectMembers
+  asyncHandler(getProjectMembers)
 );
 
 /**
@@ -92,7 +105,7 @@ router.get(
 router.put(
   '/projects/:projectId/members/:userId',
   environmentalAuthMiddleware,
-  updateProjectMemberRole
+  asyncHandler(updateProjectMemberRole)
 );
 
 /**
@@ -103,7 +116,7 @@ router.put(
 router.delete(
   '/projects/:projectId/members/:userId',
   environmentalAuthMiddleware,
-  removeProjectMember
+  asyncHandler(removeProjectMember)
 );
 
 export default router;

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
+import { asyncHandler } from '../middlewares/errorHandler';
 import {
   createOrganization,
   getOrganizationsByUser,
@@ -15,34 +16,46 @@ const router = Router();
  * Create new organization
  * Auth: Required in production, optional in development
  */
-router.post('/', environmentalAuthMiddleware, createOrganization);
+router.post('/', environmentalAuthMiddleware, asyncHandler(createOrganization));
 
 /**
  * GET /organizations
  * Get all organizations for authenticated user
  * Auth: Required in production, optional in development
  */
-router.get('/', environmentalAuthMiddleware, getOrganizationsByUser);
+router.get(
+  '/',
+  environmentalAuthMiddleware,
+  asyncHandler(getOrganizationsByUser)
+);
 
 /**
  * GET /organizations/:id
  * Get single organization by ID
  * Auth: Required in production, optional in development
  */
-router.get('/:id', environmentalAuthMiddleware, getOrganization);
+router.get('/:id', environmentalAuthMiddleware, asyncHandler(getOrganization));
 
 /**
  * PUT /organizations/:id
  * Update organization by ID
  * Auth: Required in production, optional in development
  */
-router.put('/:id', environmentalAuthMiddleware, updateOrganization);
+router.put(
+  '/:id',
+  environmentalAuthMiddleware,
+  asyncHandler(updateOrganization)
+);
 
 /**
  * DELETE /organizations/:id
  * Delete organization by ID
  * Auth: Required in production, optional in development
  */
-router.delete('/:id', environmentalAuthMiddleware, deleteOrganization);
+router.delete(
+  '/:id',
+  environmentalAuthMiddleware,
+  asyncHandler(deleteOrganization)
+);
 
 export default router;

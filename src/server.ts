@@ -10,6 +10,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
+import {
+  errorHandler,
+  asyncHandler,
+  notFoundHandler,
+  AppError,
+} from './middlewares/errorHandler';
 
 // Import all routes
 import userRoutes from './routes/userRoutes';
@@ -22,11 +28,14 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares
+// ============================================
+// MIDDLEWARE SETUP (Sequential)
+// ============================================
+
 app.use(cors());
 app.use(express.json());
 
-// Request logging middleware (good practice)
+// Request logging middleware
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   const method = req.method;
@@ -35,14 +44,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Register all routes
+// ============================================
+// ROUTES (Request handlers)
+// ============================================
+
 app.use('/api/users', userRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api', membershipRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', taskRoutes);
 
-// Health check endpoint
+// ============================================
+// HEALTH CHECK ENDPOINTS
+// ============================================
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -73,24 +88,21 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// ============================================
+// ERROR HANDLING
+// ============================================
+
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found',
-    path: req.path,
-  });
-});
+// Catches requests to routes that don't exist
+app.use(notFoundHandler);
 
 // Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
-  });
-});
+// Catches all errors thrown by routes or middlewares, must be last in middlewares
+app.use(errorHandler);
+
+// ============================================
+// SERVER INIT
+// ============================================
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -99,6 +111,6 @@ app.listen(PORT, () => {
   console.log(`
   ✅ Server running on http://localhost:${PORT}
   📍 Environment: ${NODE_ENV}
-  🔐 Auth: ${NODE_ENV === 'production' ? 'REQUIRED' : 'OPTIONAL (development mode)'}
+  🔐 Auth: ${NODE_ENV === 'production' ? 'REQUIRED' : 'Bypassed (development mode)'}
   `);
 });

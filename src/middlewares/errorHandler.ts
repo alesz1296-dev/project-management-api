@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
  * Extends JavaScript's built-in Error class
  * Adds statusCode property for HTTP responses
  */
-class AppError extends Error {
+export class AppError extends Error {
   constructor(
     public statusCode: number,
     public message: string
@@ -113,7 +113,8 @@ export const errorHandler = (
  * ============================================
  * ASYNC ERROR WRAPPER
  * ============================================
- * Wraps async route handlers to catch errors
+ * Wraps async route handlers to catch errors. We need this because it prevents having to create try/catchs for every controller function
+ * We use fn to wrap around each function
  */
 export const asyncHandler =
   (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { environmentalAuthMiddleware } from '../middlewares/environmentalAuthMiddleware';
+import { asyncHandler } from '../middlewares/errorHandler';
 import {
   addMember,
   removeMember,
@@ -17,7 +18,7 @@ const router = Router();
 router.post(
   '/organizations/:orgId/members',
   environmentalAuthMiddleware,
-  addMember
+  asyncHandler(addMember)
 );
 
 /**
@@ -28,7 +29,7 @@ router.post(
 router.delete(
   '/organizations/:orgId/members/:userId',
   environmentalAuthMiddleware,
-  removeMember
+  asyncHandler(removeMember)
 );
 
 /**
@@ -39,7 +40,7 @@ router.delete(
 router.put(
   '/organizations/:orgId/members/:userId',
   environmentalAuthMiddleware,
-  updateMemberRole
+  asyncHandler(updateMemberRole)
 );
 
 /**
@@ -50,7 +51,7 @@ router.put(
 router.get(
   '/organizations/:orgId/members',
   environmentalAuthMiddleware,
-  getOrganizationMembers
+  asyncHandler(getOrganizationMembers)
 );
 
 export default router;

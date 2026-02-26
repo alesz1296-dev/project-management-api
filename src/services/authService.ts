@@ -56,7 +56,7 @@ export class AuthService {
       throw new Error('JWT_REFRESH_SECRET not configured');
     }
 
-    // ✅ Cast secret as string to fix type error
+    // Cast secret as string to fix type error
     return jwt.sign(payload, secret as string, {
       expiresIn: '7d',
     });
