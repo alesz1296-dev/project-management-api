@@ -59,6 +59,7 @@ export class TokenService {
       return {
         id: decoded.id,
         email: decoded.email,
+        jwtToken: this.generateJWT(decoded.id, decoded.email),
       };
     } catch (error) {
       if (error instanceof AppError) {
@@ -113,6 +114,9 @@ export class TokenService {
     }
   }
 
+  static generateNewJWT(userId: number, email: string): string {
+    return this.generateJWT(userId, email);
+  }
   // ============================================
   // PRIVATE HELPER METHODS
   // ============================================

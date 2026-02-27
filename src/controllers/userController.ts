@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/userService';
+import { TokenService } from '../services/tokenService';
 
 /**
  * ============================================
@@ -16,10 +17,16 @@ export const registerUser = async (req: Request, res: Response) => {
     lastName,
   });
 
+  // user is the object directly, not wrapped
+  const tokens = await TokenService.generateTokens(user.id, user.email);
+
   res.status(201).json({
     success: true,
     message: 'User registered successfully.',
-    data: user,
+    data: {
+      user,
+      tokens,
+    },
   });
 };
 
@@ -33,9 +40,85 @@ export const loginUser = async (req: Request, res: Response) => {
 
   const result = await UserService.loginUser(email, password);
 
+  // Extract user from result
+  const tokens = await TokenService.generateTokens(
+    result.user.id,
+    result.user.email
+  );
+
   res.status(200).json({
     success: true,
     message: 'Login successful.',
+    data: {
+      user: result.user,
+      tokens,
+    },
+  });
+};
+
+/**
+ * ============================================
+ * REFRESH ACCESS TOKEN
+ * ============================================
+ */
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    throw new Error('Refresh token is required');
+  }
+
+  // Verify refresh token - returns id, email, and jwtToken
+  const { jwtToken } = await TokenService.verifyRefreshToken(refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: 'Access token refreshed successfully.',
+    data: {
+      jwtToken,
+    },
+  });
+};
+
+/**
+ * ============================================
+ * LOGOUT USER
+ * ============================================
+ */
+export const logoutUser = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    throw new Error('Refresh token is required');
+  }
+
+  // Revoke the refresh token
+  await TokenService.revokeRefreshToken(refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully.',
+  });
+};
+
+/**
+ * ============================================
+ * LOGOUT FROM ALL DEVICES
+ * ============================================
+ */
+export const logoutAllDevices = async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id; // From auth middleware
+
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  // Revoke all tokens for this user
+  const result = await TokenService.revokeAllUserTokens(userId);
+
+  res.status(200).json({
+    success: true,
+    message: `Logged out from ${result.revokedCount} device(s).`,
     data: result,
   });
 };
