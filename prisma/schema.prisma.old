@@ -5,9 +5,11 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 generator client {
   provider = "prisma-client-js"
 }
+
 // ============================================
 // USER MODEL
 // ============================================
@@ -19,19 +21,19 @@ model User {
   lastName              String
   avatar                String?
   
+  refreshTokenRecords RefreshTokenRecord[]
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   
   // Relations
-  memberships           Membership[]
-  projectMemberships    ProjectMembership[]
+  memberships           Membership[]                        // Org-level memberships
+  projectMemberships    ProjectMembership[]                 // Project-level memberships
   tasks                 Task[]           @relation("TaskAssignee")
   ownedOrganizations    Organization[]   @relation(name: "OrgOwner")
   createdProjects       Project[]        @relation(name: "ProjectCreator")
-  refreshTokenRecords   RefreshTokenRecord[]
   
-  // INDEXES
   @@index([email])
+  
 }
 
 // ============================================
@@ -53,7 +55,6 @@ model Organization {
   memberships           Membership[]
   projects              Project[]
   
-  // INDEXES
   @@index([ownerId])
   @@index([slug])
 }
@@ -61,6 +62,7 @@ model Organization {
 // ============================================
 // MEMBERSHIP MODEL (Organization-level)
 // ============================================
+// Represents "User X is in Organization Y with Role Z"
 model Membership {
   id                    Int              @id @default(autoincrement())
   
@@ -75,7 +77,6 @@ model Membership {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   
-  // INDEXES - Composite index for fast lookups
   @@unique([userId, organizationId])
   @@index([userId])
   @@index([organizationId])
@@ -111,12 +112,10 @@ model Project {
   
   // Relations
   tasks                 Task[]
-  projectMemberships    ProjectMembership[]
+  projectMemberships    ProjectMembership[]  // Project-level memberships
   
-  // INDEXES
   @@index([organizationId])
   @@index([createdBy])
-  @@index([status])  // For getProjectsByStatus() query
 }
 
 // ============================================
@@ -128,8 +127,10 @@ enum ProjectStatus {
 }
 
 // ============================================
-// PROJECT MEMBERSHIP MODEL
+// PROJECT MEMBERSHIP MODEL 
 // ============================================
+// Represents "User X is in Project Y with Role Z"
+// Only users with org membership can have project membership
 model ProjectMembership {
   id                    Int              @id @default(autoincrement())
   
@@ -144,21 +145,23 @@ model ProjectMembership {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   
-  // INDEXES
   @@unique([userId, projectId])
   @@index([userId])
   @@index([projectId])
 }
 
+// ============================================
+// PROJECT ROLE ENUM 
+// ============================================
 enum ProjectRole {
-  ADMIN
-  LEAD
-  MEMBER
-  VIEWER
+  ADMIN       // Can manage project & team
+  LEAD        // Can manage tasks & assign
+  MEMBER      // Can view & edit own tasks
+  VIEWER      // Read-only access
 }
 
 // ============================================
-// TASK MODEL 
+// TASK MODEL
 // ============================================
 model Task {
   id                    Int              @id @default(autoincrement())
@@ -168,7 +171,10 @@ model Task {
   projectId             Int
   project               Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
+  // Task creator (for audit)
   createdBy             Int?
+  
+  // Who is this task assigned to? MUST be in project team
   assignedTo            Int?
   assignee              User?            @relation(name: "TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
   
@@ -179,24 +185,9 @@ model Task {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   
-  // Index for querying tasks within a project (most common operation)
   @@index([projectId])
-  
-  // Index for filtering tasks assigned to a specific user
   @@index([assignedTo])
-  
-  // Index for filtering tasks by status (BACKLOG, TODO, IN_PROGRESS, DONE, CANCELLED)
   @@index([status])
-  
-  // Index for filtering tasks by priority level
-  @@index([priority])
-  
-  // Index for audit trails and finding tasks created by a user
-  @@index([createdBy])
-  
-  // Composite index for complex queries filtering by both status and priority
-  // Enables fast queries like "Get all HIGH priority IN_PROGRESS tasks"
-  @@index([status, priority])
 }
 
 // ============================================
@@ -221,8 +212,9 @@ enum TaskPriority {
 }
 
 // ============================================
-// REFRESH TOKEN 
+// REFRESH TOKEN
 // ============================================
+
 model RefreshTokenRecord {
   id        Int     @id @default(autoincrement())
   token     String  @unique
@@ -235,12 +227,6 @@ model RefreshTokenRecord {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  // Index for revoking all tokens associated with a user (logout all devices)
   @@index([userId])
-  
-  // Index for token verification during login (token lookup is frequent operation)
   @@index([token])
-  
-  // Index for future background jobs that need to clean up expired tokens
-  @@index([expiresAt])
 }
