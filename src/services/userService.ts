@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import * as bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { AppError } from '../middlewares/errorHandler'; //  Import AppError
 
 export class UserService {
   static async getAllUsers() {
@@ -31,7 +32,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error('User not found.');
+      throw new AppError(404, 'User not found.');
     }
 
     return user;
@@ -76,7 +77,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new Error('User with this email already exists.');
+      throw new AppError(400, 'User with this email already exists.');
     }
 
     // Hash password with bcrypt
@@ -105,9 +106,6 @@ export class UserService {
   }
 
   /**
-   * Login user and return user data + token
-   */
-  /**
    * Login user and return user data + JWT token
    */
   static async loginUser(email: string, password: string) {
@@ -126,13 +124,15 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error('User not found.');
+      // Use AppError with 401 status
+      throw new AppError(401, 'Invalid email or password.');
     }
 
     // Compare password with hashed password using bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new Error('Invalid password.');
+      // Use AppError with 401 status
+      throw new AppError(401, 'Invalid email or password.');
     }
 
     // Remove passwordHash from response

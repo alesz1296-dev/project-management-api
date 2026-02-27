@@ -9,6 +9,14 @@ import {
   AppError,
 } from './middlewares/errorHandler';
 
+// Import token bucket limiters
+import {
+  generalLimiterTokenBucket,
+  authLimiterTokenBucket,
+  writeLimiterTokenBucket,
+  healthCheckLimiterTokenBucket,
+} from './middlewares/rateLimiter';
+
 // Import all routes
 import userRoutes from './routes/userRoutes';
 import organizationRoutes from './routes/organizationRoutes';
@@ -36,6 +44,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Apply general token bucket limiter to ALL /api routes
+app.use('/api', generalLimiterTokenBucket);
+
 // ============================================
 // ROUTES (Request handlers)
 // ============================================
@@ -50,7 +61,8 @@ app.use('/api', membershipRoutes);
 // HEALTH CHECK ENDPOINTS
 // ============================================
 
-app.get('/health', (req, res) => {
+// Apply health check limiter
+app.get('/health', healthCheckLimiterTokenBucket, (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -85,11 +97,9 @@ if (process.env.NODE_ENV !== 'production') {
 // ============================================
 
 // 404 handler
-// Catches requests to routes that don't exist
 app.use(notFoundHandler);
 
 // Error handler
-// Catches all errors thrown by routes or middlewares, must be last in middlewares
 app.use(errorHandler);
 
 // ============================================
@@ -104,5 +114,6 @@ app.listen(PORT, () => {
   ✅ Server running on http://localhost:${PORT}
   📍 Environment: ${NODE_ENV}
   🔐 Auth: ${NODE_ENV === 'production' ? 'REQUIRED' : 'Bypassed (development mode)'}
+  🚦 Rate Limiting: ENABLED (Token Bucket Algorithm)
   `);
 });
