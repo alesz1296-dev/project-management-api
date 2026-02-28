@@ -227,23 +227,22 @@ export class MembershipService {
    * ============================================
    */
   static async getUserMemberships(userId: number) {
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new Error('User not found.');
-    }
-
-    // Get all organizations user is member of
+    // Single query - if empty, user doesn't exist OR has no memberships
     const memberships = await prisma.membership.findMany({
       where: { userId },
-      include: {
-        organization: true,
-      },
-      orderBy: { createdAt: 'asc' },
+      include: { organization: true },
     });
+
+    // Check if user exists
+    if (memberships.length === 0) {
+      const userExists = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true }, // Minimal select
+      });
+      if (!userExists) {
+        throw new Error('User not found.');
+      }
+    }
 
     return memberships;
   }

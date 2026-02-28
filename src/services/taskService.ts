@@ -394,7 +394,7 @@ export class TaskService {
       assignedTo?: number;
     }
   ) {
-    // CHECK: User is in organization
+    // CHECK: User is in organization (single permission check)
     const membership = await prisma.membership.findUnique({
       where: {
         userId_organizationId: { userId, organizationId },
@@ -405,16 +405,6 @@ export class TaskService {
       throw new Error('Unauthorized. User is not in this organization.');
     }
 
-    // Validate organization exists
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
-
-    if (!organization) {
-      throw new Error('Organization not found.');
-    }
-
-    // Build where clause with filters
     const where: any = {
       project: { organizationId },
     };
@@ -429,7 +419,7 @@ export class TaskService {
       where.assignedTo = filters.assignedTo;
     }
 
-    // Get all tasks in organization
+    // Get all tasks in organization with filters applied
     const tasks = await prisma.task.findMany({
       where,
       include: {
@@ -451,7 +441,6 @@ export class TaskService {
     return tasks;
   }
 }
-
 /**
  * Helper function to validate task status workflow
  */

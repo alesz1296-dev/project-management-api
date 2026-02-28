@@ -47,7 +47,7 @@ export const getOrganizationsByUser = async (req: Request, res: Response) => {
  * ============================================
  */
 export const getOrganization = async (req: Request, res: Response) => {
-  const orgId = parseInt(req.params.id);
+  const orgId = parseInt(req.params.orgId);
 
   const organization = await OrganizationService.getOrganization(orgId);
 
@@ -64,7 +64,7 @@ export const getOrganization = async (req: Request, res: Response) => {
  * ============================================
  */
 export const updateOrganization = async (req: Request, res: Response) => {
-  const orgId = parseInt(req.params.id);
+  const orgId = parseInt(req.params.orgId);
   const userId = (req.user as any).id;
   const { name, description, slug } = req.body;
 
@@ -91,7 +91,7 @@ export const updateOrganization = async (req: Request, res: Response) => {
  * ============================================
  */
 export const deleteOrganization = async (req: Request, res: Response) => {
-  const orgId = parseInt(req.params.id);
+  const orgId = parseInt(req.params.orgId);
   const userId = (req.user as any).id;
 
   const result = await OrganizationService.deleteOrganization(orgId, userId);

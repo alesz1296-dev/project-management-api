@@ -14,6 +14,8 @@ import {
   deleteOrganization,
 } from '../controllers/organizationController';
 
+import { getAllTasksInOrganization } from '../controllers/taskController';
+
 const router = Router();
 
 /**
@@ -45,22 +47,26 @@ router.get(
 /**
  * GET /api/organizations/:id
  * Get a single organization by ID
- * @param id - Organization ID
+ * @param orgId - Organization ID
  * @returns Organization details
  */
-router.get('/:id', environmentalAuthMiddleware, asyncHandler(getOrganization));
+router.get(
+  '/:orgId',
+  environmentalAuthMiddleware,
+  asyncHandler(getOrganization)
+);
 
 /**
  * PUT /api/organizations/:id
  * Update an organization
- * @param id - Organization ID
+ * @param orgId - Organization ID
  * @param name - Organization name (optional)
  * @param description - Organization description (optional)
  * @param logo - Organization logo URL (optional)
  * @returns Updated organization
  */
 router.put(
-  '/:id',
+  '/:orgId',
   environmentalAuthMiddleware,
   validate(updateOrganizationSchema),
   asyncHandler(updateOrganization)
@@ -69,13 +75,22 @@ router.put(
 /**
  * DELETE /api/organizations/:id
  * Delete an organization
- * @param id - Organization ID
+ * @param orgId - Organization ID
  * @returns Success message
  */
 router.delete(
-  '/:id',
+  '/:orgId',
   environmentalAuthMiddleware,
   asyncHandler(deleteOrganization)
+);
+
+/**
+ * GET /api/organizations/:orgId/tasks
+ */
+router.get(
+  '/:orgId/tasks',
+  environmentalAuthMiddleware,
+  asyncHandler(getAllTasksInOrganization)
 );
 
 export default router;
