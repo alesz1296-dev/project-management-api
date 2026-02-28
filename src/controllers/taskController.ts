@@ -8,7 +8,7 @@ import { TaskService } from '../services/taskService';
  */
 export const createTask = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.projectId);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
   const { title, description, priority, assignedTo, dueDate } = req.body;
 
   const task = await TaskService.createTask(projectId, userId, {
@@ -33,7 +33,7 @@ export const createTask = async (req: Request, res: Response) => {
  */
 export const getTasksByProject = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.projectId);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
   const { status, priority, assignedTo } = req.query;
 
   const tasks = await TaskService.getTasks(projectId, userId, {
@@ -56,7 +56,7 @@ export const getTasksByProject = async (req: Request, res: Response) => {
  */
 export const getTask = async (req: Request, res: Response) => {
   const taskId = parseInt(req.params.id);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
 
   const task = await TaskService.getTask(taskId, userId);
 
@@ -74,7 +74,7 @@ export const getTask = async (req: Request, res: Response) => {
  */
 export const updateTask = async (req: Request, res: Response) => {
   const taskId = parseInt(req.params.id);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
   const { title, description, status, priority, assignedTo, dueDate } =
     req.body;
 
@@ -101,7 +101,7 @@ export const updateTask = async (req: Request, res: Response) => {
  */
 export const deleteTask = async (req: Request, res: Response) => {
   const taskId = parseInt(req.params.id);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
 
   const result = await TaskService.deleteTask(taskId, userId);
 
@@ -118,7 +118,7 @@ export const deleteTask = async (req: Request, res: Response) => {
  */
 export const getMyTasks = async (req: Request, res: Response) => {
   const orgId = parseInt(req.params.orgId);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
 
   const tasks = await TaskService.getTasksByAssignee(userId, orgId);
 
@@ -137,7 +137,7 @@ export const getMyTasks = async (req: Request, res: Response) => {
 export const getTasksByUser = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.userId);
   const organizationId = parseInt(req.query.organizationId as string);
-  const requestingUserId = req.user?.id;
+  const requestingUserId = (req.user as any).id as number;
 
   if (userId !== requestingUserId) {
     const requesterMembership = await TaskService.getMembership(
@@ -174,7 +174,7 @@ export const getAllTasksInOrganization = async (
   res: Response
 ) => {
   const orgId = parseInt(req.params.orgId);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
   const { status, priority, assignedTo } = req.query;
 
   const tasks = await TaskService.getAllTasksInOrganization(orgId, userId, {
@@ -200,7 +200,7 @@ export const getProjectTasksWithDetails = async (
   res: Response
 ) => {
   const projectId = parseInt(req.params.projectId);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id as number;
   const { status, priority, assignedTo } = req.query;
 
   const tasks = await TaskService.getTasks(projectId, userId, {

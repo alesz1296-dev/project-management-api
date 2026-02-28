@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { config, isDevelopment, isProduction } from './env';
 import { prisma } from './lib/prisma';
 import {
   errorHandler,

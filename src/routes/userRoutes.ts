@@ -18,11 +18,11 @@ import {
 } from '../validators/userValidationSchemas';
 import { authenticate } from '../middlewares/authMiddleware';
 import { authLimiterTokenBucket } from '../middlewares/rateLimiter';
-import { asyncHandler } from '../middlewares/errorHandler'; // ⭐ Import asyncHandler
+import { asyncHandler } from '../middlewares/errorHandler'; // Import asyncHandler
 
 const router = Router();
 
-// ⭐ Public routes (wrapped with asyncHandler to catch errors)
+// Public routes (wrapped with asyncHandler to catch errors)
 router.post(
   '/register',
   authLimiterTokenBucket,
@@ -38,7 +38,7 @@ router.post(
 router.post('/refresh', asyncHandler(refreshAccessToken));
 router.post('/logout', asyncHandler(logoutUser));
 
-// ⭐ Protected routes (wrapped with asyncHandler)
+// Protected routes (wrapped with asyncHandler)
 router.post('/logout-all', authenticate, asyncHandler(logoutAllDevices));
 router.get('/', authenticate, asyncHandler(getAllUsers));
 router.get('/:id', authenticate, asyncHandler(getUserById));

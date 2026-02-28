@@ -8,7 +8,7 @@ import { ProjectService } from '../services/projectService';
  */
 export const createProject = async (req: Request, res: Response) => {
   const orgId = parseInt(req.params.orgId);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id;
   const { name, description } = req.body;
 
   const project = await ProjectService.createProject(orgId, userId, {
@@ -67,7 +67,7 @@ export const getProject = async (req: Request, res: Response) => {
  */
 export const updateProject = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.id);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id;
   const { name, description, status } = req.body;
 
   const updatedProject = await ProjectService.updateProject(projectId, userId, {
@@ -90,7 +90,7 @@ export const updateProject = async (req: Request, res: Response) => {
  */
 export const deleteProject = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.id);
-  const userId = req.user?.id;
+  const userId = (req.user as any).id;
 
   const result = await ProjectService.deleteProject(projectId, userId);
 
@@ -124,7 +124,7 @@ export const getProjectsByStatus = async (req: Request, res: Response) => {
  */
 export const addProjectMember = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.projectId);
-  const requestingUserId = req.user?.id;
+  const requestingUserId = (req.user as any).id;
   const { userId, role } = req.body;
 
   const projectMember = await ProjectService.addProjectMember(
@@ -166,7 +166,7 @@ export const getProjectMembers = async (req: Request, res: Response) => {
 export const updateProjectMemberRole = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.projectId);
   const userId = parseInt(req.params.userId);
-  const requestingUserId = req.user?.id;
+  const requestingUserId = (req.user as any).id;
   const { role } = req.body;
 
   const updatedMember = await ProjectService.updateProjectMemberRole(
@@ -191,7 +191,7 @@ export const updateProjectMemberRole = async (req: Request, res: Response) => {
 export const removeProjectMember = async (req: Request, res: Response) => {
   const projectId = parseInt(req.params.projectId);
   const userId = parseInt(req.params.userId);
-  const requestingUserId = req.user?.id;
+  const requestingUserId = (req.user as any).id;
 
   const result = await ProjectService.removeProjectMember(
     projectId,
