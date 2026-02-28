@@ -7,7 +7,7 @@ import { OrganizationService } from '../services/organizationService';
  * ============================================
  */
 export const createOrganization = async (req: Request, res: Response) => {
-  const userId = (req.user as any).id;
+  const userId = req.user?.id;
   const { name, description, slug } = req.body;
 
   const organization = await OrganizationService.createOrganization(userId, {
@@ -29,7 +29,7 @@ export const createOrganization = async (req: Request, res: Response) => {
  * ============================================
  */
 export const getOrganizationsByUser = async (req: Request, res: Response) => {
-  const userId = (req.user as any).id;
+  const userId = req.user?.id;
 
   const organizations =
     await OrganizationService.getOrganizationsByUser(userId);
@@ -65,7 +65,7 @@ export const getOrganization = async (req: Request, res: Response) => {
  */
 export const updateOrganization = async (req: Request, res: Response) => {
   const orgId = parseInt(req.params.orgId);
-  const userId = (req.user as any).id;
+  const userId = req.user?.id;
   const { name, description, slug } = req.body;
 
   const updatedOrganization = await OrganizationService.updateOrganization(
@@ -92,7 +92,7 @@ export const updateOrganization = async (req: Request, res: Response) => {
  */
 export const deleteOrganization = async (req: Request, res: Response) => {
   const orgId = parseInt(req.params.orgId);
-  const userId = (req.user as any).id;
+  const userId = req.user?.id;
 
   const result = await OrganizationService.deleteOrganization(orgId, userId);
 

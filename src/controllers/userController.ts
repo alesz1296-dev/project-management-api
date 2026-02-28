@@ -107,7 +107,7 @@ export const logoutUser = async (req: Request, res: Response) => {
  * ============================================
  */
 export const logoutAllDevices = async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id; // From auth middleware
+  const userId = req.user?.id; // From auth middleware
 
   if (!userId) {
     throw new Error('User ID is required');
